@@ -40,7 +40,7 @@ class ReportsHandler
       #  }
       handle_report(body)
 
-      # We don't wamt to process the same report
+      # We don't want to process the same report
       @s3_service.delete(options)
     end
   end

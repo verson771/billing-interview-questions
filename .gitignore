@@ -35,3 +35,4 @@
 /config/master.key
 
 /lib/s3_files
+/lib/s3_files_template
