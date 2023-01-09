@@ -16,7 +16,7 @@ class ReportsHandler
     @object_list = download_reports_list
     @reports = download_and_parse_reports
     @missing_event_handled = handle_missing_events(2)
-    @marked_event_deleted = mark_missing_event_as_deleted(false)
+    @marked_event_deleted = mark_missing_event_as_deleted(true)
   end
 
   def download_reports_list
@@ -73,20 +73,27 @@ class ReportsHandler
 
     cutOffDate = DateTime.now.advance(days: cutoffDays * -1)
 
-    # find VM list with no update from S3/files since the cut off days
-    # and update status = 'missing delete event'
-    missingEventVMList = VirtualMachine.where("status = :status", :status => 'active')
-                                       .where("updated_at <= :cutoffDate", :cutoffDate => cutOffDate)
+    begin
+      # find VM list with no update from S3/files since the cut off days
+      # and update status = 'missing delete event'
+      missingEventVMList = VirtualMachine.where("status = :status", :status => 'active')
+                                         .where("updated_at <= :cutoffDate", :cutoffDate => cutOffDate)
 
-    missingEventVMList.each do |vm|
-      updateTime = Time.now
-      deleteStatus = 1
-      vmStatus = "missing delete event"
-      Event.create(virtual_machine_id: vm.id, event_type: vmStatus, created_at: updateTime)
-      vm.update_columns(status: vmStatus, updated_at: updateTime)
-      vm.save
+      missingEventVMList.each do |vm|
+        updateTime = Time.now
+        deleteStatus = 1
+        vmStatus = "missing delete event"
+        Event.create(virtual_machine_id: vm.id, event_type: vmStatus, created_at: updateTime)
+        vm.update_columns(status: vmStatus, updated_at: updateTime)
+        vm.save
+      end
+      retVal = true
+
+    rescue StandardError => e
+      puts e.message
+      retVal = false
     end
-    true
+    retVal
   end
 
   def mark_missing_event_as_deleted(deleteAction)
@@ -95,17 +102,22 @@ class ReportsHandler
     missingDeleteEventStatus = 'missing delete event'
     deleteStatus = 'deleted'
 
-    # find list of VM with status of 'missing delete event status then update status = deleted'
-    missingVMList = VirtualMachine.where("status = :status", :status => missingDeleteEventStatus)
+    begin
+      # find list of VM with status of 'missing delete event status then update status = deleted'
+      missingVMList = VirtualMachine.where("status = :status", :status => missingDeleteEventStatus)
 
-    missingVMList.each do |vm|
-      deleteTime = Time.now
-      deleteStatusCode = 1
-      Event.create(virtual_machine_id: vm.id, event_type: deleteStatus, created_at: deleteTime)
-      vm.status = missingDeleteEventStatus
-      vm.update_columns(status: deleteStatus, deleted: deleteStatusCode, deleted_at: deleteTime, updated_at: deleteTime)
-      vm.save
+      missingVMList.each do |vm|
+        deleteTime = Time.now
+        deleteStatusCode = 1
+        Event.create(virtual_machine_id: vm.id, event_type: deleteStatus, created_at: deleteTime)
+        vm.status = missingDeleteEventStatus
+        vm.update_columns(status: deleteStatus, deleted: deleteStatusCode, deleted_at: deleteTime, updated_at: deleteTime)
+        vm.save
+      end
+      retVal = true
+    rescue StandardError => e
+      puts e.message
+      retVal = false
     end
-    true
   end
 end
