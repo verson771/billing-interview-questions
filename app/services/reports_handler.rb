@@ -61,12 +61,9 @@ class ReportsHandler
       return
     end
     current_status = vm.status
-    print("current_status #{current_status}")
-    print("@status_to_event_mapping[current_status] #{@status_to_event_mapping[current_status]}")
 
     if vm && current_status != json[:status]
       Event.create(virtual_machine_id: vm.id, event_type: @status_to_event_mapping[json[:status]], created_at: Time.now)
-      #vm.status = current_status
       vm.status = json[:status]
       vm.save
     end
@@ -79,7 +76,7 @@ class ReportsHandler
     # find VM list with no update from S3/files since the cut off days
     # and update status = 'missing delete event'
     missingEventVMList = VirtualMachine.where("status = :status", :status => 'active')
-                                     .where("updated_at <= :cutoffDate", :cutoffDate => cutOffDate)
+                                       .where("updated_at <= :cutoffDate", :cutoffDate => cutOffDate)
 
     missingEventVMList.each do |vm|
       updateTime = Time.now
